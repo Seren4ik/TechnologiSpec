@@ -1,0 +1,223 @@
+      #endregion
+        #region Чтение свойств Solid
+        private void GetInfo(List<Component1> objects, string pathname)
+        {
+
+            foreach (Component1 component in objects.OrderBy(c => c.pos))
+            {
+                Dictionary<object, object> DictObject1 = new Dictionary<object, object>();
+
+                string[] list1 = {"Резка (труба, круг, уголок)", "Рубка листовой оцинк. стали", "Резка листового материала лазером",
+                    "Зачистка деталей", "Гибка деталей","Рихтовка деталей","Сверление","Зенкование отверстий","Нарезание резьбы",
+                 "Точечная сварка",  "Вальцовка деталей", "Торцовка доски", "Калибровка доски", "Шлифование торцов", "Фрезерование радиусов",
+                "Изготовление на станке с ЧПУ", "Сверление отверстий","Изготовление шип/паз", "Резка поликарбоната","Шлифование деревянной детали",
+                    "Нанесение пропитки, лака, краски на деревянные детали", "Сушка деревянных деталей", "Разделка кромок под сварку",
+                "Сборка деталей в кондукторе", "Сварка деталей", "Зачистка после сварки", "Зачистка металлических деталей перед покраской",
+                "Покраска (промывка, сушка, нанесение порошка, установка в печь, съем деталей)", "Комплектация деталей на изделие","Сборка изделия",
+                "Упаковка изделия", "Перемещение пустой формы",  "Перемещение заполненной формы", "Сварка каркаса", "Разборка пустой формы (2 раза)",
+                "Смазка формы", "Сборка формы (2 раза)",  "Замес бетона", "Заливка бетона", "Установка закладных", "Выемка изделия из формы",  "Очистка формы",
+                "Обработка фасок, удаление облоя", "Шлифование изделия", "Полирование изделия", "Погрузка изделия"
+                };
+
+
+                IModelDoc2 swModel = component.sw;
+                int quantity1 = component.quantity;
+                string position = component.pos;
+                string nameConf = swModel.IGetActiveConfiguration().Name.ToString();
+                string type1 = swModel.CustomInfo["Тип"];
+                string sort1 = swModel.CustomInfo["Сортамент"];
+                string volume2 = swModel.GetCustomInfoValue(nameConf, "Масса");
+                string designation = swModel.GetCustomInfoValue(nameConf, "Обозначение");
+                string name1 = swModel.GetCustomInfoValue(nameConf, "Наименование");
+
+                var Comp1 = new ComponentProp(swModel, nameConf, "Толщина");
+                double tolsh1 = Comp1.GetProp2(swModel, nameConf, "Толщина");
+
+                var Comp2 = new ComponentProp(swModel, nameConf, "Ширина");
+                double widht = Comp2.GetProp2(swModel, nameConf, "Ширина");
+
+                var Comp3 = new ComponentProp(swModel, nameConf, "Длина");
+                double length1 = Comp3.GetProp2(swModel, nameConf, "Длина");
+
+                double volume = (tolsh1 * widht * length1) / 1000000000 * quantity1 * 1.25;//Обьем м3 на количество
+                double surface_area2 = ((tolsh1 * widht) + (tolsh1 * length1) + (length1 * widht)) / 1000000;//Площадь поверхности расчетная
+
+                var Comp4 = new ComponentProp(swModel, nameConf, "Площадь поверхности");
+                double surface_area = Comp4.GetProp2(swModel, nameConf, "Площадь поверхности");
+                double propitka = surface_area2 * 0.14 * 2 * 3 * 1.15 * quantity1;//Пропитка
+                double powder = surface_area2 * 0.14 * 2 * 1.15 * quantity1;//Порошок
+
+
+                if (type1 == "Доска" || type1 == "Брус" || type1 == "Брусок")
+                {
+                    DictObject1.Add(0, position);
+                    DictObject1.Add(1, designation);
+                    DictObject1.Add(2, name1);
+                    DictObject1.Add(3, sort1);
+                    DictObject1.Add(4, tolsh1);
+                    DictObject1.Add(5, widht);
+                    DictObject1.Add(6, length1);
+                    DictObject1.Add(7, quantity1);
+                    DictObject1.Add(8, Math.Round(volume, 5).ToString());
+                    DictObject1.Add(9, " ");
+                    DictObject1.Add(10, Math.Round(propitka, 3).ToString());
+                    DictObject1.Add(11, " ");
+                }
+
+                else
+                {
+
+                    DictObject1.Add(0, position);
+                    DictObject1.Add(1, designation);
+                    DictObject1.Add(2, name1);
+                    DictObject1.Add(3, sort1);
+                    DictObject1.Add(4, tolsh1);
+                    DictObject1.Add(5, widht);
+                    DictObject1.Add(6, length1);
+                    DictObject1.Add(7, quantity1);
+                    DictObject1.Add(8, " ");
+                    DictObject1.Add(9, volume2);
+                    DictObject1.Add(10, " ");
+                    DictObject1.Add(11, Math.Round(powder, 3).ToString());
+                }
+
+
+                foreach (string propname in list1)
+                {
+                    var Comp = new ComponentProp(swModel, nameConf, propname);
+                    DictObject1.Add(propname, Comp.GetProp2(swModel, nameConf, propname));
+                }
+
+
+                ListObject1.Add(DictObject1); //Добавление списка свойств компанента в главный список
+            }
+
+        }
+        #endregion
+
+        #region Создание файла ексель и шапки
+        static void AddExcelFile(string nameproject, string pathname)
+        {
+            try
+            {
+                using (ExcelHelper helper = new ExcelHelper())
+                {
+                    if (helper.Open(filpath: pathname + ".xlsx"))
+                    {
+                        helper.Unite(Cell1: "A1", Cell2: "L1");
+                        helper.Unite(Cell1: "A2", Cell2: "L2");
+                        helper.Unite(Cell1: "A3", Cell2: "A4");
+                        helper.Unite(Cell1: "B3", Cell2: "B4");
+                        helper.Unite(Cell1: "C3", Cell2: "C4");
+                        helper.Unite(Cell1: "D3", Cell2: "D3");
+                        helper.Unite(Cell1: "E3", Cell2: "G3");
+                        helper.Unite(Cell1: "H3", Cell2: "H4");
+                        helper.Unite(Cell1: "I3", Cell2: "J3");
+                        helper.Unite(Cell1: "K3", Cell2: "K4");
+                        helper.Unite(Cell1: "L3", Cell2: "L4");
+                        helper.Unite(Cell1: "M3", Cell2: "M4");
+                        helper.Unite(Cell1: "N3", Cell2: "N4");
+                        helper.Unite(Cell1: "O3", Cell2: "O4");
+
+                        helper.Set(column: "A1", row: "L1", data: "Технологический маршрут изготовления (нормы времени)");
+                        helper.Set(column: "A2", row: "L2", data: nameproject);
+                        helper.Set(column: "A3", row: "A4", data: "№ п/п");
+                        helper.Set(column: "B3", row: "B4", data: "Номер детали");
+                        helper.Set(column: "C3", row: "C4", data: "Название");
+                        helper.Set(column: "D3", row: "D3", data: "Сортамент");
+                        helper.Set(column: "E3", row: "G3", data: "Размеры");
+                        helper.Set(column: "I3", row: "J3", data: "Н/расхода");
+                        helper.Set(column: "E4", row: "E4", data: "Толщ.");
+                        helper.Set(column: "F4", row: "F4", data: "Шир.");
+                        helper.Set(column: "G4", row: "G4", data: "Длин.");
+                        helper.Set(column: "H3", row: "H4", data: "Kо-во");
+                        helper.Set(column: "I4", row: "I4", data: "Объем м3");
+                        helper.Set(column: "J3", row: "J4", data: "Вес/кг");
+                        helper.Set(column: "K3", row: "K4", data: "Пропитка, кг");
+                        helper.Set(column: "L3", row: "L4", data: "Краска порошковая, кг");
+                        helper.Set(column: "M3", row: "M4", data: "Операции");
+                        helper.Set(column: "N3", row: "N4", data: "Время (мин)");
+                        helper.Set(column: "O3", row: "O4", data: "Время общ.(мин)");
+
+
+                        helper.save();
+
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+            {
+
+            }
+
+        }
+
+
+        #endregion
+
+
+        #region Заполнение екселя
+        private void FillingExcel(ArrayList listname, string pathname)
+        {
+            try
+            {
+                using (ExcelHelper helper = new ExcelHelper())
+                {
+                    if (helper.Open(filpath: pathname + ".xlsx"))
+                    {
+                        int i, j, l;
+                        j = 4;
+
+                        foreach (Dictionary<object, object> list34 in listname)
+                        {
+                            l = 0;
+                            i = 0;
+                            j = j + 1;
+
+                            foreach (KeyValuePair<object, object> value1 in list34)
+                            {
+                                l = l + 1;
+                                i = i + 1;
+                                if (l <= 11)
+                                {
+
+                                    helper.Cells(column: i, row: j, data: value1.Value);
+
+                                }
+                                else if (l == 12)
+                                {
+                                    float.TryParse(value1.Value.ToString(), out float x1);
+                                    helper.Cells(column: i, row: j, data: x1);
+                                }
+                                else
+                                {
+                                    float.TryParse(value1.Value.ToString(), out float x1);
+                                    if (x1 != 0)
+                                    {
+                                        i = 13;
+                                        j = j + 1;
+                                        float.TryParse(list34[7].ToString(), out float x2);
+                                        helper.Cells(column: i, row: j, data: value1.Key);
+                                        i = i + 1;
+                                        helper.Cells(column: i, row: j, data: x1);
+                                        i = i + 1;
+                                        helper.Cells(column: i, row: j, data: x2 * x1);
+
+                                    }
+
+                                }
+
+                            }
+                        }
+
+                        helper.save();
+
+                    }
+                }
+            }
+
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+            {
+
+            }
+        }
